@@ -30,12 +30,40 @@
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
         "$ignoreUnknownInstances": true,
-        "$path": "src/client"
+        "LooksClient": {
+          "$path": "src/client/LooksClient.client.luau"
+        },
+        "ZT_Touch": {
+          "$path": "src/client/ZT_Touch.client.luau"
+        },
+        "ZT_Fx": {
+          "$path": "src/client/ZT_Fx.client.luau"
+        },
+        "ZT_Guide": {
+          "$path": "src/client/ZT_Guide.client.luau"
+        },
+        "ZT_Toxic": {
+          "$path": "src/client/ZT_Toxic.client.luau"
+        },
+        "ZT_Ideas": {
+          "$path": "src/client/ZT_Ideas.client.luau"
+        },
+        "ZT_Wardrobe": {
+          "$path": "src/client/ZT_Wardrobe.client.luau"
+        },
+        "ZT_Art": {
+          "$path": "src/client/ZT_Art.client.luau"
+        },
+        "ZT_CharSounds": {
+          "$path": "src/client/ZT_CharSounds.client.luau"
+        }
       },
       "StarterCharacterScripts": {
         "$className": "StarterCharacterScripts",
         "$ignoreUnknownInstances": true,
-        "$path": "src/character"
+        "Animate": {
+          "$path": "src/character/Animate.client.luau"
+        }
       }
     }
   }
