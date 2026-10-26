@@ -1,0 +1,2 @@
+-- ZOMBLOCK: our own character animation lives in StarterPlayerScripts.ZT_Art.
+-- This empty script takes the place of the default Roblox "Animate", so no Roblox animations are loaded.
