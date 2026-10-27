@@ -81,7 +81,7 @@ local RULES = {
 	infectStun = 1.5,  -- столько секунд только что заражённый игрок стоит на месте и никого не заражает
 	playerReach = 6,   -- с какого расстояния заражает зомби-игрок (чуть больше, чем у бота: у игроков бывает задержка связи)
 	antiCheat = true,  -- сервер возвращает назад тех, кто телепортируется, летает или бегает быстрее возможного
-	pickupCap = 60,    -- больше стольких монет с улицы за один раунд не собрать
+	pickupCap = 20,    -- больше стольких монет с улицы за один раунд не собрать
 	readGap = 1.5,     -- сколько секунд надпись на экране держится, прежде чем её сменит следующая
 	noteDelay = 7,     -- через сколько секунд после входа появляется надпись о ежедневной награде
 	weekly = true,     -- режим недели и товар недели со скидкой
@@ -154,12 +154,12 @@ local HELI_LOOP = SOUND_REGION.w_heli
 -- сколько монет за что дают
 local COINS = {
 	infect = 10,        -- зомби за каждого пойманного игрока
-	infectBot = 5,      -- зомби за пойманного жителя-бота
+	infectBot = 8,      -- зомби за пойманного жителя-бота
 	survive = 50,       -- выжившему в конце обычного раунда
 	surviveBots = 30,   -- выжившему в раунде с ботами
 	lastSurvivor = 25,  -- бонус последнему выжившему
 	zombieWin = 15,     -- каждому зомби, если заразили всех
-	zombieWinBots = 10, -- то же самое в раунде с ботами
+	zombieWinBots = 25, -- то же самое в раунде с ботами
 	consolation = 5,    -- утешительный приз
 	aliveTick = 2,      -- выжившему за каждые 10 секунд
 	pickup = 3,         -- за монету на улице
@@ -176,8 +176,8 @@ local VIP_GAMEPASS_ID = 2023034346         -- VIP: в 2 раза больше м
 -- Наборы монет за Robux: id - номер Developer Product, coins - сколько монет он даёт.
 local COIN_PRODUCTS: { { id: number, coins: number } } = {
 	{ id = 3717387062, coins = 500 },
-	{ id = 3717387093, coins = 1500 },
-	{ id = 3717387126, coins = 5000 },
+	{ id = 3717387093, coins = 1650 },
+	{ id = 3717387126, coins = 6000 },
 }
 
 -- Для проверки: впиши "ru", "ja", "es" и т.д., и все надписи будут на этом языке.
@@ -2251,7 +2251,7 @@ local function award(player: Player, base: number, flat: boolean?): number
 	profile.coins += amount
 	-- за монеты идёт опыт, а за новый уровень - подарок
 	local before = levelOf(profile.xp)
-	profile.xp += base
+	profile.xp += if session.vip then math.floor(base * 1.25 + 0.5) else base -- VIP: +25% опыта
 	local level = levelOf(profile.xp)
 	if level > before then
 		local gift = level * 10
@@ -4377,7 +4377,8 @@ local function runRound()
 	roundId += 1
 	setTimeOfDay(roundId)
 	roundEvent = Event.pick()
-	RULES.pay = (if roundEvent == "gold" then 2 else 1) + (if roundEvent ~= "" and roundEvent == RULES.week then 0.5 else 0)
+	-- золото и режим недели не складываются (было до x2.5 и фарм до 450 монет за раунд)
+	RULES.pay = if roundEvent == "gold" then 2 elseif roundEvent ~= "" and roundEvent == RULES.week then 1.5 else 1
 	Event.start()
 	Heli.clear()
 	table.clear(evac.saved)
@@ -4763,7 +4764,8 @@ local function runRound()
 
 			if elapsedWhole % 10 == 0 then
 				for _, survivor in ipairs(nowSurvivors) do
-					if getAlive(survivor) then
+					-- монеты за выживание только тем, кто двигается (не AFK)
+					if getAlive(survivor) and (Guard.active == nil or Guard.active(survivor)) then
 						award(survivor, COINS.aliveTick)
 					end
 				end
