@@ -637,7 +637,7 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.fromScale(0.62, 0.42)
+panel.Size = UDim2.fromScale(0.62, 0.72)
 panel.BackgroundColor3 = NIGHT
 panel.Visible = false
 panel.Parent = screen
@@ -647,7 +647,7 @@ local ratio = Instance.new("UIAspectRatioConstraint")
 ratio.AspectRatio = 1.5
 ratio.Parent = panel
 local limit = Instance.new("UISizeConstraint")
-limit.MaxSize = Vector2.new(420, 280)
+limit.MaxSize = Vector2.new(480, 320)
 limit.Parent = panel
 local pop = Instance.new("UIScale")
 pop.Parent = panel
@@ -828,5 +828,151 @@ task.spawn(function()
 		if now then
 			last = now
 		end
+	end)
+end)
+
+---------------------------------------------------------------------
+-- 6. PHONE: fingers and small screens (audit of 27 Oct)
+--  * close buttons ("X") and the small HUD buttons are at least 44 px
+--  * a big panel made in pixels is scaled down to fit the screen
+--  * Esc / gamepad B closes the sound panel
+---------------------------------------------------------------------
+local UserInputService = game:GetService("UserInputService")
+local FINGER = 44
+local CLOSE_TEXT = { X = true, ["✕"] = true, ["×"] = true, ["✖"] = true }
+
+local function minSize(button: GuiButton, w: number, h: number)
+	if button:FindFirstChild("ZT_Finger") then
+		return
+	end
+	local c = Instance.new("UISizeConstraint")
+	c.Name = "ZT_Finger"
+	c.MinSize = Vector2.new(w, h)
+	c.Parent = button
+end
+
+local function fitPanel(frame: Frame)
+	if frame:FindFirstChild("ZT_Fit") or frame:FindFirstChildOfClass("UIScale") then
+		return
+	end
+	local fit = Instance.new("UIScale")
+	fit.Name = "ZT_Fit"
+	fit.Parent = frame
+	local function update()
+		local view = camera.ViewportSize
+		fit.Scale = 1
+		local size = frame.AbsoluteSize
+		local room = Vector2.new(view.X - 24, view.Y - 24)
+		if size.X > 0 and size.Y > 0 then
+			fit.Scale = math.min(1, room.X / size.X, room.Y / size.Y)
+		end
+	end
+	update()
+	camera:GetPropertyChangedSignal("ViewportSize"):Connect(update)
+end
+
+local function phone(g: Instance)
+	if g:IsA("TextButton") and CLOSE_TEXT[g.Text] then
+		minSize(g, FINGER, FINGER)
+	elseif g:IsA("Frame") and g.Parent and g.Parent:IsA("ScreenGui") and g.Size.Y.Offset >= 300 and g.Size.Y.Scale == 0 then
+		task.defer(fitPanel, g) -- a panel sized in pixels (the build menu is 340 x 430)
+	end
+end
+for _, d in ipairs(gui:GetDescendants()) do
+	safely("phone", function()
+		phone(d)
+	end)
+end
+gui.DescendantAdded:Connect(function(d)
+	task.defer(function()
+		if d.Parent then
+			safely("phone", function()
+				phone(d)
+			end)
+		end
+	end)
+end)
+minSize(gear, FINGER, FINGER)
+task.spawn(function()
+	local guide = gui:WaitForChild("ZT_GuideGui", 30)
+	local how = guide and guide:WaitForChild("HowToPlay", 30)
+	if how and how:IsA("GuiButton") then
+		minSize(how, 96, FINGER)
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
+		if panel.Visible then
+			openPanel(false)
+		end
+	end
+end)
+
+---------------------------------------------------------------------
+-- 7. VFX: a burst of sparks where a coin / boost / shield was picked up (everyone near sees it)
+---------------------------------------------------------------------
+task.spawn(function()
+	local map = workspace:WaitForChild("ZombieTagMap", 120)
+	local folder = map and map:WaitForChild("Pickups", 120)
+	if not folder then
+		return
+	end
+	local seen: { [Instance]: { pos: Vector3, color: Color3 } } = {}
+	local function remember(item: Instance)
+		local part = if item:IsA("BasePart") then item else item:FindFirstChildWhichIsA("BasePart", true)
+		if part then
+			seen[item] = { pos = part.Position, color = part.Color }
+		end
+	end
+	for _, item in ipairs(folder:GetChildren()) do
+		remember(item)
+	end
+	folder.ChildAdded:Connect(function(item)
+		task.defer(remember, item)
+	end)
+	folder.ChildRemoved:Connect(function(item)
+		local info = seen[item]
+		seen[item] = nil
+		if not info then
+			return
+		end
+		-- only when somebody is right there (a pick-up), not when the round clears the street
+		local near = false
+		for _, p in ipairs(Players:GetPlayers()) do
+			local c = p.Character
+			local root = c and c:FindFirstChild("HumanoidRootPart")
+			if root and root:IsA("BasePart") and (root.Position - info.pos).Magnitude < 7 then
+				near = true
+				break
+			end
+		end
+		if not near or (info.pos - camera.CFrame.Position).Magnitude > 150 then
+			return
+		end
+		local spot = Instance.new("Part")
+		spot.Anchored = true
+		spot.CanCollide = false
+		spot.CanQuery = false
+		spot.CanTouch = false
+		spot.Transparency = 1
+		spot.Size = Vector3.new(0.2, 0.2, 0.2)
+		spot.Position = info.pos
+		local burst = Instance.new("ParticleEmitter")
+		burst.Texture = "rbxassetid://121492703539177" -- our p_spark
+		burst.Color = ColorSequence.new(info.color, Color3.fromHex("F2C433"))
+		burst.LightEmission = 0.8
+		burst.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) })
+		burst.Lifetime = NumberRange.new(0.35, 0.6)
+		burst.Speed = NumberRange.new(8, 14)
+		burst.SpreadAngle = Vector2.new(180, 180)
+		burst.Acceleration = Vector3.new(0, -20, 0)
+		burst.Rate = 0
+		burst.Parent = spot
+		spot.Parent = workspace
+		burst:Emit(16)
+		task.delay(1, function()
+			spot:Destroy()
+		end)
 	end)
 end)

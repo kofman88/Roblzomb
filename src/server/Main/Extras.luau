@@ -146,7 +146,7 @@ return function(ctx: any)
 	ctx.Guard.active = function(player: Player): boolean
 		local e = track[player]
 		local _, _, roundId = ctx.state()
-		return not RULES.antiCheat or (e ~= nil and (e.round ~= roundId or e.walked >= 6))
+		return not RULES.antiCheat or (e ~= nil and (e.round ~= roundId or e.walked >= 30))
 	end
 
 	if RULES.antiCheat then
@@ -1393,7 +1393,7 @@ return function(ctx: any)
 	-- Поэтому экран зомби сам сообщает о касании (скрипт ZT_Touch у игрока), а сервер проверяет:
 	-- зомби в раунде и не оглушён, цель рядом (с запасом на задержку связи) и не за стеной.
 	---------------------------------------------------------------------
-	local TOUCH_REACH = 13 -- насколько далеко может быть цель на сервере, когда зомби коснулся её у себя на экране...
+	local TOUCH_REACH = 9 -- насколько далеко может быть цель на сервере, когда зомби коснулся её у себя на экране...
 	local TOUCH_LAG = 17.5 -- ...и сколько шагов добавляется за каждую секунду задержки связи зомби сверх 0.15 с (до 0.5 с)
 	if ctx.catch and ctx.botCatch and ctx.wall then safely("touch_start", function()
 		local remote = Instance.new("RemoteEvent")

@@ -320,6 +320,7 @@ fn.Parent = ReplicatedStorage
 
 local sent: { [number]: { last: number, day: number, count: number } } = {}
 local busy: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local voteAt: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any -- one vote per 2 s: each vote writes the DataStore
 
 local function clean(text: any): string?
 	if type(text) ~= "string" then
@@ -407,8 +408,20 @@ fn.OnServerInvoke = function(player: Player, action: any, a: any): any
 			local idea: Idea = { id = HttpService:GenerateGUID(false), t = shown, a = player.DisplayName, u = player.UserId, v = 1, d = now, by = { player.UserId } }
 			write(idea, nil)
 			result = { ok = true, data = listFor(player) }
-		elseif action == "vote" and type(a) == "string" then
-			write(nil, { id = a, user = player.UserId })
+		elseif action == "vote" and type(a) == "string" and #a <= 64 then
+			-- only a real idea, once per player, not more often than every 2 seconds (protects the DataStore budget)
+			local target = nil
+			for _, idea in ipairs(ideas) do
+				if idea.id == a then
+					target = idea
+					break
+				end
+			end
+			local clock = os.clock()
+			if target and not table.find(target.by or {}, player.UserId) and clock - (voteAt[player] or 0) >= 2 then
+				voteAt[player] = clock
+				write(nil, { id = a, user = player.UserId })
+			end
 			result = { ok = true, data = listFor(player) }
 		end
 	end)

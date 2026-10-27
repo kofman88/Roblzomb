@@ -872,10 +872,17 @@ return function(ctx: any): any
 	tut.OnServerEvent:Connect(function(player: Player, what: any, key: any)
 		local s = state(player)
 		local now = os.clock()
-		if now - s.asked < 0.2 then
+		-- the list ("guide") and one topic ("read") have their own limits: a read sent right after the list is not lost
+		local reading = what == "read"
+		local last = if reading then ((s :: any).readAt or 0) else s.asked
+		if now - last < (if reading then 0.05 else 0.2) then
 			return
 		end
-		s.asked = now
+		if reading then
+			(s :: any).readAt = now
+		else
+			s.asked = now
+		end
 		if what == "guide" then
 			local list = {}
 			for _, topic in ipairs(TOPICS) do

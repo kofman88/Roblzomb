@@ -30,7 +30,7 @@ local REACH = 5                 -- с какого расстояния тыкв
 local MAX = 999
 
 -- товары ивента в меню стройки: id, цена в тыквах, как построить (координаты двора, вход смотрит на +Z)
-local GOODS = { { id = "hw_lantern", cost = 4 }, { id = "hw_grave", cost = 8 }, { id = "hw_scare", cost = 12 }, { id = "hw_ghost", cost = 18 }, { id = "hw_hat", cost = 25 } }
+local GOODS = { { id = "hw_lantern", cost = 12 }, { id = "hw_grave", cost = 24 }, { id = "hw_scare", cost = 36 }, { id = "hw_ghost", cost = 54 }, { id = "hw_hat", cost = 75 } } -- x3 (audit 27 Oct): the event lasts 20 days
 local ICONS = { hw_lantern = "🎃", hw_grave = "💀", hw_scare = "🌽", hw_ghost = "👻", hw_hat = "🎩" }
 
 local TEXT: { [string]: { [string]: string } } = {
