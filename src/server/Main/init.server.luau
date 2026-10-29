@@ -136,6 +136,7 @@ local SOUND_REGION: { [string]: NumberRange } = {
 	w_steps = NumberRange.new(68.8641, 72.1641),
 	w_whoosh = NumberRange.new(76.0241, 76.6877),
 	win = NumberRange.new(77.1677, 80.2877),
+	lose = NumberRange.new(35.7647, 37.8847), -- the zombie moan (w_growl2), played to the losers only: the zombies who did not catch everyone
 }
 for name in pairs(SOUND_REGION) do
 	SOUND_FILES[name] = SFX_PACK
@@ -144,7 +145,7 @@ end
 local SOUND_LOUD: { [string]: number } = {
 	m_lobby = 0.3, m_hide = 0.33, m_hunt = 0.24, m_finale = 0.3,
 	w_heli = 1, w_growl1 = 0.9, w_growl2 = 0.9, w_growl3 = 0.9, w_whoosh = 0.7, w_boing = 0.6, w_steps = 0.9,
-	win = 0.7, tick = 0.6, start = 0.6, hunt = 0.65, infected = 0.65, evac = 0.7, levelup = 0.65, land = 0.6,
+	win = 0.7, lose = 0.55, tick = 0.6, start = 0.6, hunt = 0.65, infected = 0.65, evac = 0.7, levelup = 0.65, land = 0.6,
 }
 -- в мелодии финала самый громкий момент кончается на этой секунде: игра подгадывает его к концу раунда
 local FINALE_PEAK = 166
@@ -223,6 +224,7 @@ type ShopItem = {
 	level: number?, -- с какого уровня товар можно купить (если не указано - сразу)
 	days: number?,  -- подарок: его нельзя купить, он выдаётся за столько дней игры подряд
 	note: string?,  -- пометка у цены (товар недели)
+	row: number?,   -- 2 = второй ряд витрин перед стеной следов (легенды и подарки за 30 и 60 дней)
 }
 
 -- level - с какого уровня товар можно купить. Так отмечены только три самых редких товара:
@@ -249,6 +251,14 @@ local SHOP_ITEMS: { ShopItem } = {
 	{ id = "skin_ghost", kind = "skin", price = 1800, colorA = Color3.fromRGB(235, 245, 255), colorB = Color3.fromRGB(120, 140, 170) },
 	{ id = "skin_lava", kind = "skin", price = 2600, level = 10, colorA = Color3.fromRGB(255, 120, 30), colorB = Color3.fromRGB(140, 20, 0) },
 	{ id = "skin_star", kind = "skin", price = 0, days = 14, colorA = Color3.fromRGB(255, 240, 150), colorB = Color3.fromRGB(255, 255, 255) },
+	-- ЛЕГЕНДЫ (аудит 27 окт.): траты поздней игры после 14-го уровня и подарки за 30 и 60 дней подряд.
+	-- Стоят вторым рядом перед стеной следов.
+	{ id = "trail_aurora", kind = "trail", price = 3600, level = 16, row = 2, colorA = Color3.fromRGB(124, 242, 90), colorB = Color3.fromRGB(160, 92, 245) },
+	{ id = "skin_toxic", kind = "skin", price = 4200, level = 18, row = 2, colorA = Color3.fromRGB(124, 242, 90), colorB = Color3.fromRGB(30, 70, 20) },
+	{ id = "trail_storm", kind = "trail", price = 5400, level = 20, row = 2, colorA = Color3.fromRGB(255, 236, 120), colorB = Color3.fromRGB(76, 70, 200) },
+	{ id = "skin_void", kind = "skin", price = 6000, level = 22, row = 2, colorA = Color3.fromRGB(160, 92, 245), colorB = Color3.fromRGB(14, 6, 30) },
+	{ id = "trail_reactor", kind = "trail", price = 0, days = 30, row = 2, colorA = Color3.fromRGB(124, 242, 90), colorB = Color3.fromRGB(242, 196, 51) },
+	{ id = "skin_legend", kind = "skin", price = 0, days = 60, row = 2, colorA = Color3.fromRGB(255, 215, 80), colorB = Color3.fromRGB(124, 242, 90) },
 }
 
 local ITEM_BY_ID: { [string]: ShopItem } = {}
@@ -1537,18 +1547,24 @@ do
 
 	-- витрины магазина: следы вдоль дальней стены, облики зомби вдоль левой
 	local shopZ = -LOBBY_HALF + 6
-	local trailTotal, skinTotal = 0, 0
+	local trailTotal, skinTotal, frontTotal = 0, 0, 0
 	for _, item in ipairs(SHOP_ITEMS) do
-		if item.kind == "trail" then
+		if item.row == 2 then
+			frontTotal += 1
+		elseif item.kind == "trail" then
 			trailTotal += 1
 		else
 			skinTotal += 1
 		end
 	end
-	local trailIndex, skinIndex = 0, 0
+	local trailIndex, skinIndex, frontIndex = 0, 0, 0
 	for _, item in ipairs(SHOP_ITEMS) do
 		local place: Vector3
-		if item.kind == "trail" then
+		if item.row == 2 then
+			-- второй ряд: на полшага сдвинут от заднего, чтобы не закрывать его витрины
+			frontIndex += 1
+			place = Vector3.new((frontIndex - (frontTotal + 1) / 2) * 7, LOBBY_Y + 2, shopZ + 9)
+		elseif item.kind == "trail" then
 			trailIndex += 1
 			place = Vector3.new((trailIndex - (trailTotal + 1) / 2) * 7, LOBBY_Y + 2, shopZ)
 		else
@@ -1734,6 +1750,13 @@ local function createWorldLabels(player: Player)
 		local item = info.item
 		if info.kind == "item" and item then
 			local label = addBillboard(info.part, "", 6.5, playerGui)
+			if item.row == 2 then
+				-- второй ряд: подпись-ценник на передней грани подставки, чтобы не закрывать подписи заднего ряда
+				local board = label.Parent :: BillboardGui
+				board.StudsOffset = Vector3.zero
+				board.StudsOffsetWorldSpace = Vector3.new(0, 0, 2.3)
+				board.Size = UDim2.fromScale(4.4, 1.7)
+			end
 			if hud then
 				hud.itemLabels[item.id] = label
 			end
@@ -1877,6 +1900,9 @@ local function createHud(player: Player)
 				if region then
 					sound.PlaybackRegionsEnabled = true
 					sound.PlaybackRegion = region
+				end
+				if name == "lose" then
+					sound.PlaybackSpeed = 0.85 -- a little lower: a sad moan, not a threat
 				end
 				sound.Parent = gui
 				sounds[name] = sound
@@ -4817,6 +4843,8 @@ local function runRound()
 				-- поймал половину города: это победа зомби
 				toast(solo, "coins", award(solo, COINS.zombieWinBots))
 				playSound(solo, "win")
+			else
+				playSound(solo, "lose")
 			end
 		else
 			setStatus("win_survivors")
@@ -4825,6 +4853,7 @@ local function runRound()
 				local session = sessions[player]
 				if session then
 					toast(player, "you_caught", session.caught)
+					playSound(player, "lose")
 				end
 			end
 		end
@@ -4852,6 +4881,7 @@ local function runRound()
 		setStatus("win_escaped")
 		bigText(nil, "win_escaped")
 		for _, player in ipairs(zombies) do
+			playSound(player, "lose")
 			if Guard.active(player) then
 				award(player, COINS.consolation)
 			end

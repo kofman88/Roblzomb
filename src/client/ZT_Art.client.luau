@@ -901,13 +901,7 @@ task.spawn(function()
 	end
 end)
 
-UserInputService.InputBegan:Connect(function(input, processed)
-	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
-		if panel.Visible then
-			openPanel(false)
-		end
-	end
-end)
+-- Esc / B: see section 8 (it closes the top window, the sound panel included)
 
 ---------------------------------------------------------------------
 -- 7. VFX: a burst of sparks where a coin / boost / shield was picked up (everyone near sees it)
@@ -976,3 +970,142 @@ task.spawn(function()
 		end)
 	end)
 end)
+
+---------------------------------------------------------------------
+-- 8. WINDOWS: only one window at a time (audit of 27 Oct)
+--  Wardrobe, Ideas, Codes, Build menu, Sound settings and the Book.
+--  The window opened last stays; Esc / gamepad B closes the top one.
+---------------------------------------------------------------------
+local Replicated = game:GetService("ReplicatedStorage")
+type Window = { name: string, isOpen: () -> boolean, close: () -> () }
+local function remoteFire(name: string, arg: string)
+	local r = Replicated:FindFirstChild(name)
+	if r and r:IsA("RemoteEvent") then
+		r:FireServer(arg)
+	end
+end
+local function enabledGui(name: string): ScreenGui?
+	local g = gui:FindFirstChild(name)
+	return if g and g:IsA("ScreenGui") then g else nil
+end
+local WINDOWS: { Window } = {
+	{ name = "settings", isOpen = function()
+		return panel.Visible
+	end, close = function()
+		openPanel(false)
+	end },
+	{ name = "book", isOpen = function()
+		local g = gui:FindFirstChild("ZT_GuideGui")
+		local book = g and g:FindFirstChild("Book")
+		return book ~= nil and book:IsA("GuiObject") and book.Visible
+	end, close = function()
+		local g = gui:FindFirstChild("ZT_GuideGui")
+		local book = g and g:FindFirstChild("Book")
+		if book and book:IsA("GuiObject") then
+			book.Visible = false
+		end
+	end },
+	{ name = "ideas", isOpen = function()
+		local g = enabledGui("ZT_IdeasGui")
+		return g ~= nil and g.Enabled
+	end, close = function()
+		local g = enabledGui("ZT_IdeasGui")
+		if g then
+			g.Enabled = false
+		end
+	end },
+	{ name = "wardrobe", isOpen = function()
+		local g = enabledGui("ZT_WardrobeGui")
+		return g ~= nil and g.Enabled
+	end, close = function()
+		local g = enabledGui("ZT_WardrobeGui")
+		if g then
+			g.Enabled = false
+		end
+	end },
+	-- the next two are made by the server: it is told to close them, and they hide at once on this screen
+	{ name = "codes", isOpen = function()
+		local g = enabledGui("ZT_Codes")
+		return g ~= nil and g.Enabled
+	end, close = function()
+		local g = enabledGui("ZT_Codes")
+		if g then
+			g.Enabled = false
+		end
+		remoteFire("ZT_Code", "close")
+	end },
+	{ name = "build", isOpen = function()
+		local g = enabledGui("ZT_BuildMenu")
+		return g ~= nil and g.Enabled
+	end, close = function()
+		local g = enabledGui("ZT_BuildMenu")
+		if g then
+			g.Enabled = false
+		end
+		remoteFire("ZT_Build", "close")
+	end },
+}
+local wasOpen: { [string]: boolean } = {}
+local order: { Window } = {} -- open windows, the newest last
+local function forget(w: Window)
+	local i = table.find(order, w)
+	if i then
+		table.remove(order, i)
+	end
+end
+task.spawn(function()
+	while true do
+		task.wait(0.15)
+		for _, w in ipairs(WINDOWS) do
+			local ok, open = pcall(w.isOpen)
+			open = ok and open == true
+			if open and not wasOpen[w.name] then
+				-- a new window: every other open window closes
+				for _, other in ipairs(WINDOWS) do
+					if other ~= w and wasOpen[other.name] then
+						pcall(other.close)
+						wasOpen[other.name] = false
+						forget(other)
+					end
+				end
+				table.insert(order, w)
+			elseif not open and wasOpen[w.name] then
+				forget(w)
+			end
+			wasOpen[w.name] = open
+		end
+	end
+end)
+UserInputService.InputBegan:Connect(function(input, processed)
+	if input.KeyCode ~= Enum.KeyCode.Escape and input.KeyCode ~= Enum.KeyCode.ButtonB then
+		return
+	end
+	if processed and input.KeyCode == Enum.KeyCode.ButtonB then
+		return -- B inside a text box or the Roblox menu
+	end
+	local top = order[#order]
+	if top then
+		pcall(top.close)
+		wasOpen[top.name] = false
+		forget(top)
+	end
+end)
+
+---------------------------------------------------------------------
+-- 9. DASH TRAIL: the server hangs a trail on whoever dashes, so everyone sees it.
+--  The one who dashed already draws his own trail at once (ZT_Fx): the server copy is hidden here.
+---------------------------------------------------------------------
+local function hideOwnCopy(item: Instance)
+	if item.Name == "ZT_DashTrail" and item:IsA("Trail") then
+		local character = player.Character
+		if character and item:IsDescendantOf(character) then
+			item.Enabled = false
+		end
+	end
+end
+player.CharacterAdded:Connect(function(character)
+	character.DescendantAdded:Connect(hideOwnCopy)
+end)
+if player.Character then
+	player.Character.DescendantAdded:Connect(hideOwnCopy)
+end

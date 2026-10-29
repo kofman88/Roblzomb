@@ -1,17 +1,21 @@
 --!strict
 -- ZT_CharSounds (ZOMBLOCK): takes the place of the default Roblox character sounds.
--- Our sfx pack only: footsteps (a loop region) while running on the ground, a short whoosh on a jump.
+-- Our sfx pack only: footsteps (a loop region) while running on the ground, a short whoosh on a jump,
+-- a dull thump on a hard landing (from our build pack).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local PACK = "rbxassetid://119377051797825"
 local STEPS = NumberRange.new(68.8641, 72.1641)
 local WHOOSH = NumberRange.new(76.0241, 76.6877)
+local BUILD_PACK = "rbxassetid://91852844501226"
+local THUMP = NumberRange.new(6.1400, 6.6510) -- b_drop: a beam dropped into place, dusty thump
+local HARD_FALL = 38 -- falling faster than this (studs/s) makes a landing sound
 
-local function make(root: BasePart, name: string, region: NumberRange, volume: number, looped: boolean): Sound
+local function make(root: BasePart, name: string, region: NumberRange, volume: number, looped: boolean, pack: string?): Sound
 	local s = Instance.new("Sound")
 	s.Name = name
-	s.SoundId = PACK
+	s.SoundId = pack or PACK
 	s.PlaybackRegionsEnabled = true
 	s.PlaybackRegion = region
 	if looped then
@@ -51,7 +55,7 @@ end
 killDefault()
 task.delay(3, killDefault)
 
-local rigs: { [Model]: { steps: Sound, jump: Sound, humanoid: Humanoid, root: BasePart, air: boolean } } = {}
+local rigs: { [Model]: { steps: Sound, jump: Sound, land: Sound, humanoid: Humanoid, root: BasePart, air: boolean, fall: number } } = {}
 
 local function track(character: Model)
 	local humanoid = character:WaitForChild("Humanoid", 10)
@@ -63,7 +67,8 @@ local function track(character: Model)
 	rigs[character] = {
 		steps = make(root, "ZT_Steps", STEPS, 0.35, true),
 		jump = make(root, "ZT_Jump", WHOOSH, 0.25, false),
-		humanoid = humanoid, root = root, air = false,
+		land = make(root, "ZT_Land", THUMP, 0.5, false, BUILD_PACK),
+		humanoid = humanoid, root = root, air = false, fall = 0,
 	}
 	humanoid.StateChanged:Connect(function(_, new)
 		local rig = rigs[character]
@@ -94,6 +99,22 @@ RunService.Heartbeat:Connect(function()
 		local v = rig.root.AssemblyLinearVelocity
 		local speed = Vector3.new(v.X, 0, v.Z).Magnitude
 		local onGround = rig.humanoid.FloorMaterial ~= Enum.Material.Air
+		if not onGround then
+			rig.air = true
+			rig.fall = math.min(rig.fall, v.Y)
+		elseif rig.air then
+			-- just touched the ground: a thump, louder and lower the harder the fall
+			rig.air = false
+			local hit = -rig.fall
+			rig.fall = 0
+			if hit > HARD_FALL and rig.humanoid.Health > 0 then
+				local k = math.clamp((hit - HARD_FALL) / 60, 0, 1)
+				rig.land.Volume = 0.3 + 0.4 * k
+				rig.land.PlaybackSpeed = 1.15 - 0.3 * k
+				rig.land.TimePosition = THUMP.Min
+				rig.land:Play()
+			end
+		end
 		local run = onGround and speed > 3 and rig.humanoid.Health > 0
 		if run then
 			rig.steps.PlaybackSpeed = math.clamp(speed / 16, 0.7, 1.4)

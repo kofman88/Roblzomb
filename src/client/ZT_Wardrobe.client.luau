@@ -278,6 +278,14 @@ local function open()
 	build()
 	if not conn then
 		conn = RunService.RenderStepped:Connect(function(dt)
+			if not gui.Enabled then
+				-- closed from outside (the window manager in ZT_Art): stop turning the figures
+				if conn then
+					conn:Disconnect()
+					conn = nil
+				end
+				return
+			end
 			spin += dt * 0.9
 			for _, s in ipairs(spinners) do
 				if s.model.Parent then

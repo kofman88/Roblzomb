@@ -423,6 +423,92 @@ return function(ctx: any): any
 			dust.SpreadAngle = Vector2.new(180, 180)
 			dust.RotSpeed = NumberRange.new(-90, 90)
 			lamp(aura, warm, 11, 1.1)
+		elseif id == "skin_toxic" then
+			-- КОРОЛЬ ОТРАВЫ (легенда, 18 ур.): корона из светящихся колб, баки с отравой на плечах, капли и пузыри.
+			local slime = Color3.fromRGB(124, 242, 90)
+			local steel = Color3.fromRGB(74, 80, 92)
+			eyes(slime, 0.26, 0.22)
+			add(head, "tube", 0.2, 1.38, 1.38, at(0, 0.66, 0) * Z(math.pi / 2), steel, Enum.Material.Metal)
+			for k = 0, 4 do
+				local turn = Y(k * 2 * math.pi / 5 + math.pi)
+				local tall = if k == 0 then 0.78 else 0.56
+				add(head, "tube", tall, 0.26, 0.26, turn * at(0, 0.82 + tall / 2, -0.6) * Z(math.pi / 2), slime, NEON, 0.15)
+				add(head, "block", 0.3, 0.08, 0.3, turn * at(0, 0.84 + tall, -0.6), steel, Enum.Material.Metal)
+			end
+			-- маска-фильтр на лице
+			add(head, "block", 0.7, 0.34, 0.14, at(0, -0.22, -0.62), steel, Enum.Material.Metal)
+			for _, side in ipairs(SIDES) do
+				add(head, "tube", 0.2, 0.3, 0.3, at(0.42 * side, -0.26, -0.66) * Y(math.pi / 2), slime, NEON)
+			end
+			for _, side in ipairs(SIDES) do
+				local tank = add(body, "tube", 1.3, 0.62, 0.62, at(0.62 * side, 0.3, 0.86) * Z(math.pi / 2), slime, NEON, 0.2)
+				add(body, "tube", 0.14, 0.68, 0.68, at(0.62 * side, 0.95, 0.86) * Z(math.pi / 2), steel, Enum.Material.Metal)
+				add(body, "tube", 0.14, 0.68, 0.68, at(0.62 * side, -0.35, 0.86) * Z(math.pi / 2), steel, Enum.Material.Metal)
+				add(body, "block", 0.12, 1.1, 0.12, at(1.1 * side, 1.25, 0.4) * X(0.9) * Z(-0.4 * side), steel, Enum.Material.Metal)
+				add(body, "block", 1.1, 0.34, 1.1, at(1.5 * side, 1.18, 0) * Z(-0.15 * side), steel, Enum.Material.Metal)
+				add(body, "block", 0.5, 0.2, 0.5, at(1.55 * side, 1.38, 0) * Z(-0.15 * side), slime, NEON)
+				local drip = spray(tank, SPARK, 6, 0.6, 1, 0.5, 1, 0.3, 0.1, slime, Color3.fromRGB(40, 160, 40))
+				drip.EmissionDirection = Enum.NormalId.Bottom
+				drip.Acceleration = Vector3.new(0, -8 * s, 0)
+			end
+			local bubbles = spray(cloud(body, 2.8, 3, 1.6, at(0, 0, 0)), SPARK, 12, 1, 1.6, 0.6, 1.6, 0.5, 0.2, slime, WHITE)
+			bubbles.Acceleration = Vector3.new(0, 3 * s, 0)
+			bubbles.SpreadAngle = Vector2.new(180, 180)
+			lamp(add(body, "block", 0.2, 0.2, 0.2, at(0, 0.4, 0), WHITE, nil, 1), slime, 11, 1.2)
+		elseif id == "skin_void" then
+			-- БЕЗДНА (легенда, 22 ур.): чёрная дыра за головой с лиловым кольцом, осколки вокруг тела, тёмный дым.
+			local violet = Color3.fromRGB(160, 92, 245)
+			local night = Color3.fromRGB(14, 6, 30)
+			eyes(WHITE, 0.26, 0.12)
+			add(head, "ball", 1.5, 1.5, 1.5, at(0, 0.5, 1.15), night, Enum.Material.Glass)
+			ring(head, at(0, 0.5, 1.15) * X(math.pi / 2), 1.08, 0.12, violet, NEON)
+			ring(head, at(0, 0.5, 1.15) * X(math.pi / 2) * Z(0.5), 1.35, 0.07, WHITE, NEON, 0.3)
+			for k = 0, 7 do
+				local turn = Y(k * math.pi / 4)
+				local high = 0.9 * math.sin(k * 1.7)
+				add(body, "block", 0.3, 0.55, 0.12, turn * at(0, high, -2.1) * Z(k * 0.7) * X(0.4), if k % 2 == 0 then violet else night, if k % 2 == 0 then NEON else Enum.Material.Glass)
+			end
+			for _, side in ipairs(SIDES) do
+				add(body, "block", 0.5, 0.9, 0.5, at(1.55 * side, 1.4, 0) * Z(-0.35 * side) * Y(math.pi / 4), night, Enum.Material.Glass)
+				add(body, "block", 0.18, 0.5, 0.18, at(1.78 * side, 1.95, 0) * Z(-0.35 * side), violet, NEON)
+			end
+			add(body, "block", 0.36, 0.36, 0.1, at(0, 0.35, -0.54) * Z(math.pi / 4), violet, NEON)
+			local smoke = spray(cloud(body, 2.6, 3, 1.6, at(0, -0.4, 0.2)), SMOKE, 7, 1.2, 1.9, 0.4, 1.2, 1, 2.2, Color3.fromRGB(80, 40, 140), night)
+			smoke.LightEmission = 0
+			smoke.Transparency = NumberSequence.new(0.5, 1)
+			smoke.Rotation = NumberRange.new(0, 360)
+			smoke.RotSpeed = NumberRange.new(-30, 30)
+			local motes = spray(cloud(head, 3, 3, 3, at(0, 0.5, 1.15)), SPARK, 12, 0.6, 1, -2, -1, 0.35, 0, WHITE, violet)
+			motes.SpreadAngle = Vector2.new(180, 180)
+			lamp(motes.Parent :: BasePart, violet, 10, 1)
+		elseif id == "skin_legend" then
+			-- ЛЕГЕНДА УЛИЦ (подарок за 60 дней подряд): золотые крылья с ядовитыми кончиками, корона со звёздами,
+			-- ядовито-зелёный плащ с золотой каймой, золотые и зелёные искры.
+			local gold = Color3.fromRGB(255, 215, 80)
+			local slime = Color3.fromRGB(124, 242, 90)
+			eyes(slime, 0.26, 0.24)
+			wings(gold, slime, Enum.Material.Metal, nil)
+			add(head, "tube", 0.26, 1.44, 1.44, at(0, 0.68, 0) * Z(math.pi / 2), gold, Enum.Material.Metal)
+			for k = 0, 5 do
+				local turn = Y(k * math.pi / 3)
+				add(head, "block", 0.24, 0.5, 0.1, turn * at(0, 1, -0.63), gold, Enum.Material.Metal)
+				star(head, turn * at(0, 1.38, -0.63), 0.26, if k % 2 == 0 then slime else WHITE)
+			end
+			star(head, at(0, 1.6, 0), 0.5, gold)
+			local cape = at(0, 1, 0.58) * X(-0.16)
+			add(body, "block", 2.6, 3.6, 0.1, cape * at(0, -1.8, 0), mix(slime, BLACK, 0.45), Enum.Material.Fabric)
+			add(body, "block", 2.66, 0.28, 0.14, cape * at(0, -3.5, 0), gold, Enum.Material.Metal)
+			add(body, "block", 2.66, 0.2, 0.14, cape * at(0, -0.1, 0), gold, Enum.Material.Metal)
+			for _, side in ipairs(SIDES) do
+				add(body, "block", 1.2, 0.3, 1.2, at(1.5 * side, 1.16, 0) * Z(-0.12 * side), gold, Enum.Material.Metal)
+				star(body, at(1.55 * side, 1.5, 0), 0.34, slime)
+			end
+			star(body, at(0, 0.35, -0.56), 0.62, gold)
+			local aura = cloud(body, 3.6, 4.2, 2.2, at(0, 0.2, 0))
+			local dust = spray(aura, SPARK, 16, 0.8, 1.4, 0.4, 1.8, 0.7, 0, gold, slime)
+			dust.SpreadAngle = Vector2.new(180, 180)
+			dust.RotSpeed = NumberRange.new(-90, 90)
+			lamp(aura, gold, 12, 1.2)
 		else
 			-- облик, которого этот модуль ещё не знает: хотя бы светящиеся глаза в его цвете
 			eyes(mix(a, WHITE, 0.4))
@@ -557,7 +643,9 @@ return function(ctx: any): any
 				local feet = stand.Position + Vector3.new(0, stand.Size.Y / 2, 0)
 				-- обе фигурки повёрнуты на четверть оборота: зомби со своей стены смотрит на покупателя,
 				-- бегун у дальней стены стоит боком - так видно и его, и ленту следа
-				local base = CFrame.new(feet) * CFrame.Angles(0, -math.pi / 2, 0)
+				-- зомби во втором ряду (перед стеной следов) смотрит прямо в лобби
+				local front = item.kind == "skin" and stand.Position.Z < -30
+				local base = CFrame.new(feet) * CFrame.Angles(0, if front then math.pi else -math.pi / 2, 0)
 				if item.kind == "skin" then
 					zombie(base, item, figure)
 				else
@@ -685,7 +773,7 @@ return function(ctx: any): any
 		for id, label in pairs(labels) do
 			local item = byId[id]
 			local board: Instance? = label.Parent
-			if item and item.kind == "skin" and board and board:IsA("BillboardGui") then
+			if item and item.kind == "skin" and item.row ~= 2 and board and board:IsA("BillboardGui") then
 				local was = board:GetAttribute("ZT_Lift")
 				local done: number = if type(was) == "number" then was else 0
 				if done ~= LIFT then

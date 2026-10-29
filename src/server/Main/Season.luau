@@ -337,6 +337,33 @@ return function(ctx: any): any
 			ctx.Guard.dash(player, length)
 		end
 		fx:FireClient(player, "dash", flat, length, cooldown, zombie)
+		-- a trail everybody sees (the dasher's own screen hides this copy: it already draws its own at once)
+		local old = root:FindFirstChild("ZT_DashTrail")
+		if old then
+			old:Destroy()
+		end
+		local top = Instance.new("Attachment")
+		top.Name = "ZT_DashTop"
+		top.Position = Vector3.new(0, 1.2, 0)
+		top.Parent = root
+		local bottom = Instance.new("Attachment")
+		bottom.Name = "ZT_DashBottom"
+		bottom.Position = Vector3.new(0, -1.2, 0)
+		bottom.Parent = root
+		local trail = Instance.new("Trail")
+		trail.Name = "ZT_DashTrail"
+		trail.Attachment0 = top
+		trail.Attachment1 = bottom
+		trail.Color = ColorSequence.new(if zombie then Color3.fromRGB(124, 242, 90) else Color3.fromRGB(236, 238, 232), Color3.fromRGB(124, 242, 90))
+		trail.Transparency = NumberSequence.new(0.3, 1)
+		trail.Lifetime = 0.35
+		trail.LightEmission = 0.8
+		trail.Parent = root
+		task.delay(0.8, function()
+			trail:Destroy()
+			top:Destroy()
+			bottom:Destroy()
+		end)
 		return true
 	end
 	fx.OnServerEvent:Connect(function(player: Player, what: any)
