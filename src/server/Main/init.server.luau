@@ -5132,6 +5132,13 @@ do
 				return roundActive, finalHunt, roundId, roundEvent
 			end,
 			big = bigText, sound = playSound, quests = Quest.today, sync = syncStats, trail = applyTrail, questBoard = Quest.refresh, eventsOn = ROUND_EVENTS > 0, dailyBase = DAILY_REWARD, items = SHOP_ITEMS, events = EVENTS, itemName = itemName,
+			-- покупка или надевание товара так же, как кнопкой у витрины (окно первого следа, модуль Welcome)
+			shop = function(player: Player, id: string)
+				local item = ITEM_BY_ID[id]
+				if item then
+					shopHandler(player, item)
+				end
+			end,
 			saveBroken = function(): boolean
 				return store ~= nil and not RunService:IsStudio()
 			end,

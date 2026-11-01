@@ -26,6 +26,7 @@ local CODES: { [string]: { coins: number?, spins: number?, pumpkins: number?, pa
 	ZOMBLOCK = { coins = 100, spins = 1 },
 	HALLOWEEN = { pumpkins = 10, spins = 1, untilTime = 1794268800 },
 	RELEASE = { parts = 8, coins = 50 },
+	TIKTOK = { coins = 150, spins = 1 }, -- только для роликов TikTok: по нему видно, сколько игроков пришло оттуда
 }
 
 local TEXT: { [string]: { [string]: string } } = {
@@ -600,6 +601,10 @@ return function(ctx: any): any
 			return
 		end
 		list[key] = 1
+		-- в аналитику: какой код ввели (Code_TIKTOK = игрок из TikTok)
+		pcall(function()
+			game:GetService("AnalyticsService"):LogCustomEvent(player, "Code_" .. code, 1)
+		end)
 		local text = give(session, gift)
 		if ctx.sync then
 			ctx.sync(player)

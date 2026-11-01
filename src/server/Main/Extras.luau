@@ -1581,6 +1581,13 @@ return function(ctx: any)
 			(require :: any)(evacSeats)(ctx)
 		end)
 	end
+	-- ПЕРВАЯ ПОКУПКА И ПЕРВЫЙ ДОМ (модуль Welcome): окно «выбери свой первый след» после первого раунда
+	local welcome = if home then home:FindFirstChild("Welcome") else nil
+	if welcome then
+		safely("welcome", function()
+			(require :: any)(welcome)(ctx)
+		end)
+	end
 
 	return true
 end
